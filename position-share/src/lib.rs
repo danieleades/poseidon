@@ -1,6 +1,9 @@
 #![feature(impl_trait_in_assoc_type)]
 use chrono::{DateTime, Utc};
-use std::{cmp::Ordering, collections::{BTreeMap, BTreeSet}};
+use std::{
+    cmp::Ordering,
+    collections::{BTreeMap, BTreeSet},
+};
 use uuid::Uuid;
 
 mod probability;
@@ -32,7 +35,9 @@ pub struct Datum {
 
 impl Ord for Datum {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.timestamp.cmp(&other.timestamp).then_with(|| self.id.cmp(&other.id))
+        self.timestamp
+            .cmp(&other.timestamp)
+            .then_with(|| self.id.cmp(&other.id))
     }
 }
 

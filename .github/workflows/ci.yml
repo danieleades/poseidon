@@ -1,0 +1,86 @@
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+name: Continuous integration
+
+jobs:
+  test:
+    name: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        rust: [nightly]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+      - run: cargo test --all-features
+
+  fmt:
+    name: format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+      - run: cargo fmt --all --check
+
+  clippy:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: clippy
+      - uses: actions-rs-plus/clippy-check@v2
+        with:
+          args: --all-features --all-targets
+
+#   docs:
+#     name: docs
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v4
+#       - uses: dtolnay/rust-toolchain@stable
+#       - run: cargo doc --no-deps
+
+  cargo-deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+
+#   msrv:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v4
+#       - uses: taiki-e/install-action@cargo-no-dev-deps
+#       - name: Get MSRV from Cargo.toml
+#         run: |
+#           MSRV=$(sed -n 's/^rust-version\s*=\s*//p' Cargo.toml)
+#           echo "MSRV=$MSRV" >> $GITHUB_ENV
+#       - uses: dtolnay/rust-toolchain@master
+#         with:
+#           toolchain: ${{ env.MSRV }}
+#       - run: cargo no-dev-deps check --workspace
+
+  # Automatically merge if it's a Dependabot PR that passes the build
+  dependabot:
+    needs: [test, fmt, clippy, cargo-deny]
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Enable auto-merge for Dependabot PRs
+        run: gh pr merge --auto --merge "$PR_URL"
+        env:
+          PR_URL: ${{github.event.pull_request.html_url}}
+          GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
