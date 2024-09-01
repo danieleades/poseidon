@@ -1,5 +1,6 @@
 #![feature(impl_trait_in_assoc_type)]
 use chrono::{DateTime, Utc};
+use std::cmp::Reverse;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use uuid::Uuid;
 
@@ -204,8 +205,6 @@ fn distance_from_line(start: &Coordinate, end: &Coordinate, coordinate: &Coordin
     // The perpendicular distance is the magnitude of the cross product divided by the magnitude of the line vector
     cross_product_magnitude / line_magnitude
 }
-
-use std::cmp::Reverse;
 
 #[derive(Debug)]
 struct Results<'a> {

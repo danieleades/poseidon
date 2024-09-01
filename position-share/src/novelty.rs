@@ -54,8 +54,6 @@ mod tests {
             probability_already_transmitted: Probability::ZERO,
             id: Uuid::new_v4(),
         };
-        dbg!(a.score());
-        dbg!(b.score());
         assert!(a > b);
     }
 }
