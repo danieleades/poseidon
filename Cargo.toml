@@ -5,8 +5,7 @@ resolver = "2"
 [workspace.package]
 authors = ["Daniel Eades <danieleades@hotmail.com>"]
 edition = "2021"
-license = "GPL-3.0-or-later OR Commercial"
-license-file = "COMMERCIAL-LICENSE.txt"
+license = "GPL-3.0"
 
 [workspace.lints.clippy]
 all = "deny"

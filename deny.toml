@@ -12,6 +12,11 @@ allow = [
 ]
 confidence-threshold = 1.0
 
+exceptions = [
+    # Allow GPL-3.0 for the current workspace only
+    { crate = "position-share", allow = ["GPL-3.0"] },
+]
+
 [bans]
 wildcards = "deny"
 highlight = "all"
