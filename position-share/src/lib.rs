@@ -90,9 +90,17 @@ impl Positions {
 
         // Then recursively search the rest of the coordinates.
         let segment = self.data.iter().collect::<Vec<_>>();
-        let results = self.most_novel_coordinates_in_segment(recipient, &segment, results);
+        let mut stack = vec![&segment[1..segment.len() - 1]];
 
-        // Sort the results by novelty score, then return the top `n_max` results.
+        while let Some(segment) = stack.pop() {
+            if let Some((datum, novelty_score, index)) = self.most_novel_coordinate_in_segment(recipient, segment) {
+                results.insert(datum, novelty_score);
+                // Push the left and right subsegments onto the stack
+                stack.push(&segment[1..=index]);
+                stack.push(&segment[index..]);
+            }
+        }
+
         results.into_iter().collect()
     }
 
@@ -115,49 +123,35 @@ impl Positions {
                 .complement();
         ((start, start_novelty), (end, end_novelty))
     }
-    /// Returns the most novel datum for a given recipient in a given segment and it's associated 'novelty score'.
-    ///
-    /// The novelty score is the perpendicular distance from the segment defined by the start and end of the segment to the coordinate, weighted by the probability that the recipient has not received the coordinate yet.
-    ///
-    /// This method is recursive. It returns the most novel datum for the segment, and is used recursively to search the left and right subsegments on either side of the most novel datum.
-    fn most_novel_coordinates_in_segment<'a>(
+
+    /// Returns the most novel coordinate in a given segment, along with its novelty score and index.
+    fn most_novel_coordinate_in_segment<'a>(
         &'a self,
         recipient: &NodeId,
         segment: &[&'a Datum],
-        mut results: Results<'a>,
-    ) -> Results<'a> {
-        // Base case: if the segment is empty or has only one or two data points, return an empty vector
-        if segment.len() <= 2 {
-            return results;
+    ) -> Option<(&'a Datum, f64, usize)> {
+        // Algorithm:
+        // 1. if there are less than 3 data points, return None
+        // 2. find the most novel datum in the segment, excluding the first and last points
+        // 3. return the most novel datum, its novelty score, and its index
+        if segment.len() < 3 {
+            return None;
         }
 
-        // Get the start and end coordinates of the segment
-        let start = &segment[0].coordinate;
-        let end = &segment[segment.len() - 1].coordinate;
+        let start = segment[0]; 
+        let end = segment[segment.len() - 1];
 
-        // Find the most novel datum in the segment, excluding the first and last points
-        let most_novel = segment[1..segment.len() - 1]
+        segment[1..segment.len() - 1]
             .iter()
             .enumerate()
             .map(|(i, datum)| {
-                let distance = distance_from_line(start, end, &datum.coordinate);
-                let probability = self
-                    .transmission_history
-                    .probability_recipient_has_datum(recipient, &datum.id);
+                let distance = distance_from_line(&start.coordinate, &end.coordinate, &datum.coordinate);
+                let probability = self.transmission_history.probability_recipient_has_datum(recipient, &datum.id);
                 let novelty_score = distance * probability.complement();
                 (i + 1, datum, novelty_score)
             })
             .max_by(|a, b| a.2.partial_cmp(&b.2).unwrap_or(std::cmp::Ordering::Equal))
-            .expect("Segment must have at least one element");
-
-        // Recursively search the left and right subsegments
-        let left_segment = &segment[..=most_novel.0];
-        let right_segment = &segment[most_novel.0..];
-
-        results.insert(most_novel.1, most_novel.2);
-        let results = self.most_novel_coordinates_in_segment(recipient, left_segment, results);
-        let results = self.most_novel_coordinates_in_segment(recipient, right_segment, results);
-        results
+            .map(|(i, datum, score)| (*datum, score, i))
     }
 }
 
