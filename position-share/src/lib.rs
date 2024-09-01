@@ -117,7 +117,7 @@ impl Positions {
     ) -> ((&Datum, Novelty), (&Datum, Novelty)) {
         let start = self.data.first().unwrap();
         let end = self.data.last().unwrap();
-        let distance = start.coordinate.distance(&end.coordinate);
+        let distance = (start.coordinate - end.coordinate).magnitude();
 
         let create_novelty = |datum: &Datum| Novelty {
             distance,
@@ -174,33 +174,19 @@ impl Positions {
 /// Calculates the perpendicular distance from a coordinate to a line defined by two coordinates.
 fn distance_from_line(start: &Coordinate, end: &Coordinate, coordinate: &Coordinate) -> f64 {
     // Vector from start to end
-    let line_vector = Coordinate {
-        x: end.x - start.x,
-        y: end.y - start.y,
-        z: end.z - start.z,
-    };
+    let line_vector = end - start;
 
     // Vector from start to the coordinate
-    let point_vector = Coordinate {
-        x: coordinate.x - start.x,
-        y: coordinate.y - start.y,
-        z: coordinate.z - start.z,
-    };
+    let point_vector = coordinate - start;
 
     // Calculate the cross product
-    let cross_product = Coordinate {
-        x: line_vector.y * point_vector.z - line_vector.z * point_vector.y,
-        y: line_vector.z * point_vector.x - line_vector.x * point_vector.z,
-        z: line_vector.x * point_vector.y - line_vector.y * point_vector.x,
-    };
+    let cross_product = &line_vector.cross_product(&point_vector);
 
     // Calculate the magnitude of the cross product
-    let cross_product_magnitude =
-        (cross_product.x.powi(2) + cross_product.y.powi(2) + cross_product.z.powi(2)).sqrt();
+    let cross_product_magnitude = cross_product.magnitude();
 
     // Calculate the magnitude of the line vector
-    let line_magnitude =
-        (line_vector.x.powi(2) + line_vector.y.powi(2) + line_vector.z.powi(2)).sqrt();
+    let line_magnitude = line_vector.magnitude();
 
     // The perpendicular distance is the magnitude of the cross product divided by the magnitude of the line vector
     cross_product_magnitude / line_magnitude
