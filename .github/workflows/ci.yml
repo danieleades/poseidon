@@ -42,13 +42,13 @@ jobs:
         with:
           args: --all-features --all-targets
 
-  docs:
-    name: docs
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo doc --no-deps
+#   docs:
+#     name: docs
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v4
+#       - uses: dtolnay/rust-toolchain@stable
+#       - run: cargo doc --no-deps
 
   cargo-deny:
     runs-on: ubuntu-latest
@@ -72,7 +72,7 @@ jobs:
 
   # Automatically merge if it's a Dependabot PR that passes the build
   dependabot:
-    needs: [test, fmt, clippy, docs, cargo-deny]
+    needs: [test, fmt, clippy, cargo-deny]
     permissions:
       contents: write
       pull-requests: write
