@@ -2,7 +2,7 @@
 use chrono::{DateTime, Utc};
 use std::{
     cmp::Ordering,
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, VecDeque},
 };
 use uuid::Uuid;
 
@@ -90,14 +90,17 @@ impl Positions {
 
         // Then recursively search the rest of the coordinates.
         let segment = self.data.iter().collect::<Vec<_>>();
-        let mut stack = vec![&segment[1..segment.len() - 1]];
+        let mut queue = VecDeque::new();
+        queue.push_back(&segment[0..segment.len()]);
 
-        while let Some(segment) = stack.pop() {
-            if let Some((datum, novelty_score, index)) = self.most_novel_coordinate_in_segment(recipient, segment) {
+        while let Some(segment) = queue.pop_front() {
+            if let Some((datum, novelty_score, index)) =
+                self.most_novel_coordinate_in_segment(recipient, segment)
+            {
                 results.insert(datum, novelty_score);
-                // Push the left and right subsegments onto the stack
-                stack.push(&segment[1..=index]);
-                stack.push(&segment[index..]);
+                // Push the left and right subsegments onto the queue
+                queue.push_back(&segment[1..=index]);
+                queue.push_back(&segment[index..]);
             }
         }
 
@@ -138,20 +141,22 @@ impl Positions {
             return None;
         }
 
-        let start = segment[0]; 
-        let end = segment[segment.len() - 1];
+        let start = segment.first().unwrap();
+        let end = segment.last().unwrap();
 
         segment[1..segment.len() - 1]
             .iter()
-            .enumerate()
-            .map(|(i, datum)| {
-                let distance = distance_from_line(&start.coordinate, &end.coordinate, &datum.coordinate);
-                let probability = self.transmission_history.probability_recipient_has_datum(recipient, &datum.id);
+            .zip(1..)
+            .map(|(datum, i)| {
+                let distance =
+                    distance_from_line(&start.coordinate, &end.coordinate, &datum.coordinate);
+                let probability = self
+                    .transmission_history
+                    .probability_recipient_has_datum(recipient, &datum.id);
                 let novelty_score = distance * probability.complement();
-                (i + 1, datum, novelty_score)
+                (*datum, novelty_score, i)
             })
-            .max_by(|a, b| a.2.partial_cmp(&b.2).unwrap_or(std::cmp::Ordering::Equal))
-            .map(|(i, datum, score)| (*datum, score, i))
+            .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
     }
 }
 
