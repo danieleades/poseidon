@@ -1,0 +1,14 @@
+[workspace]
+members = ["position-share"]
+resolver = "2"
+
+[workspace.package]
+authors = ["Daniel Eades <danieleades@hotmail.com>"]
+edition = "2021"
+license = "GPL-3.0-or-later OR Commercial"
+license-file = "COMMERCIAL-LICENSE.txt"
+
+[workspace.lints.clippy]
+all = "deny"
+pedantic = "warn"
+nursery = "warn"
