@@ -1,9 +1,7 @@
 #![feature(impl_trait_in_assoc_type)]
 use chrono::{DateTime, Utc};
-use std::{
-    cmp::Ordering,
-    collections::{BTreeMap, BTreeSet},
-};
+use std::cmp::Reverse;
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use uuid::Uuid;
 
 mod probability;
@@ -13,6 +11,9 @@ use transmission_history::TransmissionHistory;
 
 mod coordinate;
 pub use coordinate::Coordinate;
+
+mod novelty;
+use novelty::Novelty;
 
 type NodeId = Uuid;
 
@@ -90,74 +91,83 @@ impl Positions {
 
         // Then recursively search the rest of the coordinates.
         let segment = self.data.iter().collect::<Vec<_>>();
-        let results = self.most_novel_coordinates_in_segment(recipient, &segment, results);
+        let mut queue = VecDeque::new();
+        queue.push_back(&segment[0..segment.len()]);
 
-        // Sort the results by novelty score, then return the top `n_max` results.
+        while let Some(segment) = queue.pop_front() {
+            if let Some((datum, novelty_score, index)) =
+                self.most_novel_coordinate_in_segment(recipient, segment)
+            {
+                results.insert(datum, novelty_score);
+                // Push the left and right subsegments onto the queue
+                queue.push_back(&segment[1..=index]);
+                queue.push_back(&segment[index..]);
+            }
+        }
+
         results.into_iter().collect()
     }
 
     /// Returns the novelty scores for the start and end coordinates.
     ///
     /// The novelty score is the distance between them, scaled by the probability that the recipient has not received them yet.
-    fn start_and_end_point_novelty(&self, recipient: &NodeId) -> ((&Datum, f64), (&Datum, f64)) {
+    fn start_and_end_point_novelty(
+        &self,
+        recipient: &NodeId,
+    ) -> ((&Datum, Novelty), (&Datum, Novelty)) {
         let start = self.data.first().unwrap();
         let end = self.data.last().unwrap();
         let distance = start.coordinate.distance(&end.coordinate);
-        let start_novelty = distance
-            * self
+
+        let create_novelty = |datum: &Datum| Novelty {
+            distance,
+            probability_already_transmitted: self
                 .transmission_history
-                .probability_recipient_has_datum(recipient, &start.id)
-                .complement();
-        let end_novelty = distance
-            * self
-                .transmission_history
-                .probability_recipient_has_datum(recipient, &end.id)
-                .complement();
+                .probability_recipient_has_datum(recipient, &datum.id),
+            id: datum.id,
+        };
+
+        let start_novelty = create_novelty(start);
+        let end_novelty = create_novelty(end);
+
         ((start, start_novelty), (end, end_novelty))
     }
-    /// Returns the most novel datum for a given recipient in a given segment and it's associated 'novelty score'.
-    ///
-    /// The novelty score is the perpendicular distance from the segment defined by the start and end of the segment to the coordinate, weighted by the probability that the recipient has not received the coordinate yet.
-    ///
-    /// This method is recursive. It returns the most novel datum for the segment, and is used recursively to search the left and right subsegments on either side of the most novel datum.
-    fn most_novel_coordinates_in_segment<'a>(
+
+    /// Returns the most novel coordinate in a given segment, along with its novelty score and index.
+    fn most_novel_coordinate_in_segment<'a>(
         &'a self,
         recipient: &NodeId,
         segment: &[&'a Datum],
-        mut results: Results<'a>,
-    ) -> Results<'a> {
-        // Base case: if the segment is empty or has only one or two data points, return an empty vector
-        if segment.len() <= 2 {
-            return results;
+    ) -> Option<(&'a Datum, Novelty, usize)> {
+        // Algorithm:
+        // 1. if there are less than 3 data points, return None
+        // 2. find the most novel datum in the segment, excluding the first and last points
+        // 3. return the most novel datum, its novelty score, and its index
+        if segment.len() < 3 {
+            return None;
         }
 
-        // Get the start and end coordinates of the segment
-        let start = &segment[0].coordinate;
-        let end = &segment[segment.len() - 1].coordinate;
+        let start = segment.first().unwrap();
+        let end = segment.last().unwrap();
 
-        // Find the most novel datum in the segment, excluding the first and last points
-        let most_novel = segment[1..segment.len() - 1]
+        segment[1..segment.len() - 1]
             .iter()
-            .enumerate()
-            .map(|(i, datum)| {
-                let distance = distance_from_line(start, end, &datum.coordinate);
+            .zip(1..)
+            .map(|(datum, i)| {
+                let distance =
+                    distance_from_line(&start.coordinate, &end.coordinate, &datum.coordinate);
                 let probability = self
                     .transmission_history
                     .probability_recipient_has_datum(recipient, &datum.id);
-                let novelty_score = distance * probability.complement();
-                (i + 1, datum, novelty_score)
+                let novelty = Novelty {
+                    distance,
+                    probability_already_transmitted: probability,
+                    id: datum.id,
+                };
+
+                (*datum, novelty, i)
             })
-            .max_by(|a, b| a.2.partial_cmp(&b.2).unwrap_or(std::cmp::Ordering::Equal))
-            .expect("Segment must have at least one element");
-
-        // Recursively search the left and right subsegments
-        let left_segment = &segment[..=most_novel.0];
-        let right_segment = &segment[most_novel.0..];
-
-        results.insert(most_novel.1, most_novel.2);
-        let results = self.most_novel_coordinates_in_segment(recipient, left_segment, results);
-        let results = self.most_novel_coordinates_in_segment(recipient, right_segment, results);
-        results
+            .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
     }
 }
 
@@ -197,38 +207,9 @@ fn distance_from_line(start: &Coordinate, end: &Coordinate, coordinate: &Coordin
 }
 
 #[derive(Debug)]
-struct Novelty {
-    score: f64,
-    id: Uuid,
-}
-
-impl Ord for Novelty {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        match other.score.partial_cmp(&self.score) {
-            None | Some(Ordering::Equal) => other.id.cmp(&self.id),
-            Some(ordering) => ordering,
-        }
-    }
-}
-
-impl PartialOrd for Novelty {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl PartialEq for Novelty {
-    fn eq(&self, other: &Self) -> bool {
-        self.score.eq(&other.score) && self.id.eq(&other.id)
-    }
-}
-
-impl Eq for Novelty {}
-
-#[derive(Debug)]
 struct Results<'a> {
     n_max: usize,
-    data: BTreeMap<Novelty, &'a Datum>,
+    data: BTreeMap<Reverse<Novelty>, &'a Datum>,
 }
 
 impl<'a> Results<'a> {
@@ -241,26 +222,26 @@ impl<'a> Results<'a> {
     }
 
     /// Inserts a new datum into the results, keeping only the `n_max` most novel results.
-    fn insert(&mut self, datum: &'a Datum, novelty_score: f64) {
+    fn insert(&mut self, datum: &'a Datum, novelty: Novelty) {
+        // There are less results than the maximum, so insert it with no further checks.
         if self.data.len() < self.n_max {
-            let novelty = Novelty {
-                score: novelty_score,
-                id: datum.id,
-            };
-            self.data.insert(novelty, datum);
-        } else if novelty_score > self.min_novelty() {
-            self.data.pop_last();
-            let novelty = Novelty {
-                score: novelty_score,
-                id: datum.id,
-            };
-            self.data.insert(novelty, datum);
+            self.data.insert(Reverse(novelty), datum);
+        // The results are full, so only insert the datum if it is more novel than the least novel result.
+        } else if let Some(min_novelty) = self.min_novelty() {
+            if novelty > *min_novelty {
+                self.data.pop_last();
+                self.data.insert(Reverse(novelty), datum);
+            }
         }
+        // Only reachable if n_max is 0, meaning we don't want any results.
     }
 
     /// Returns the novelty score of the least novel coordinate in the results or 0.0 if the results are empty.
-    fn min_novelty(&self) -> f64 {
-        self.data.keys().next_back().map_or(0.0, |k| k.score)
+    fn min_novelty(&self) -> Option<&Novelty> {
+        self.data
+            .keys()
+            .next_back()
+            .map(|reverse_novelty| &reverse_novelty.0)
     }
 }
 

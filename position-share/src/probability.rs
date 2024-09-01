@@ -60,3 +60,23 @@ impl From<Probability> for f64 {
         Self::from(value.value) / Self::from(u32::MAX) * 100.0
     }
 }
+
+impl Ord for Probability {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.value.cmp(&other.value)
+    }
+}
+
+impl PartialOrd for Probability {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for Probability {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value
+    }
+}
+
+impl Eq for Probability {}
