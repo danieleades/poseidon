@@ -22,7 +22,9 @@ impl TransmissionHistory {
         datum_id: &Uuid,
     ) -> Probability {
         self.history
+            // Get the history for this recipient
             .get(recipient)
+            // Get the probability that this recipient has the datum
             .and_then(|datums| datums.get(datum_id))
             .copied()
             .unwrap_or(Probability::ZERO)
