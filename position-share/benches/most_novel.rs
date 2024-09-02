@@ -48,7 +48,13 @@ fn bench_most_novel_coordinates(c: &mut Criterion) {
     let positions = generate_path(5000);
     let recipient = Uuid::new_v4();
     c.bench_function("most_novel_coordinates", |b| {
-        b.iter(|| positions.most_novel_coordinates(black_box(&recipient), black_box(100)));
+        b.iter(|| {
+            positions.most_novel_coordinates_with_threshold(
+                black_box(&recipient),
+                black_box(100),
+                black_box(0.1),
+            )
+        });
     });
 }
 

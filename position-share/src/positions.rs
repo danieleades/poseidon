@@ -7,6 +7,7 @@ mod geometric_novelty;
 
 use crate::coordinate::Coordinate;
 use crate::novelty::Novelty;
+use crate::probability::Probability;
 use crate::transmission_history::TransmissionHistory;
 
 type NodeId = Uuid;
@@ -145,7 +146,10 @@ impl Positions {
                 }
             }
 
-            results.insert(datum, novelty);
+            // Only insert the datum if the recipient has a non-zero probability of not having received it yet.
+            if novelty.probability_not_transmitted > Probability::ZERO {
+                results.insert(datum, novelty);
+            }
             // Push the left and right subsegments onto the queue
             for segment in [&segment[..=index], &segment[index..]] {
                 if let Some((datum, distance, index)) =
