@@ -102,6 +102,14 @@ impl Positions {
                     .probability_recipient_has_datum(recipient, &datum.id).complement(),
                 id: datum.id,
             };
+
+            // stop condition
+            if let Some(min_novelty) = results.min_novelty() {
+                if novelty < *min_novelty && distance < 0.01 * min_novelty.distance {
+                    break;
+                }
+            }
+
             results.insert(datum, novelty);
             // Push the left and right subsegments onto the queue
             for segment in [&segment[..=index], &segment[index..]] {
