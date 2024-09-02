@@ -95,10 +95,16 @@ impl Positions {
         queue.push_back(&segment[0..segment.len()]);
 
         while let Some(segment) = queue.pop_front() {
-            if let Some((datum, novelty_score, index)) =
-                self.most_novel_coordinate_in_segment(recipient, segment)
+            if let Some((datum, distance, index)) = Self::most_novel_coordinate_in_segment(segment)
             {
-                results.insert(datum, novelty_score);
+                let novelty = Novelty {
+                    distance,
+                    probability_already_transmitted: self
+                        .transmission_history
+                        .probability_recipient_has_datum(recipient, &datum.id),
+                    id: datum.id,
+                };
+                results.insert(datum, novelty);
                 // Push the left and right subsegments onto the queue
                 queue.push_back(&segment[1..=index]);
                 queue.push_back(&segment[index..]);
@@ -135,10 +141,8 @@ impl Positions {
 
     /// Returns the most novel coordinate in a given segment, along with its novelty score and index.
     fn most_novel_coordinate_in_segment<'a>(
-        &'a self,
-        recipient: &NodeId,
         segment: &[&'a Datum],
-    ) -> Option<(&'a Datum, Novelty, usize)> {
+    ) -> Option<(&'a Datum, f64, usize)> {
         // Algorithm:
         // 1. if there are less than 3 data points, return None
         // 2. find the most novel datum in the segment, excluding the first and last points
@@ -156,16 +160,7 @@ impl Positions {
             .map(|(datum, i)| {
                 let distance =
                     distance_from_line(&start.coordinate, &end.coordinate, &datum.coordinate);
-                let probability = self
-                    .transmission_history
-                    .probability_recipient_has_datum(recipient, &datum.id);
-                let novelty = Novelty {
-                    distance,
-                    probability_already_transmitted: probability,
-                    id: datum.id,
-                };
-
-                (*datum, novelty, i)
+                (*datum, distance, i)
             })
             .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
     }
