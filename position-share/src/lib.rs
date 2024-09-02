@@ -92,22 +92,31 @@ impl Positions {
         // Then recursively search the rest of the coordinates.
         let segment = self.data.iter().collect::<Vec<_>>();
         let mut queue = VecDeque::new();
-        queue.push_back(&segment[0..segment.len()]);
+        if let Some((datum, distance, index)) = Self::most_novel_coordinate_in_segment(&segment) {
+            queue.push_back((&segment[..], datum, index, distance));
+        }
 
-        while let Some(segment) = queue.pop_front() {
-            if let Some((datum, distance, index)) = Self::most_novel_coordinate_in_segment(segment)
+        while let Some((segment, datum, index, distance)) = queue.pop_front() {
+            let novelty = Novelty {
+                distance,
+                probability_already_transmitted: self
+                    .transmission_history
+                    .probability_recipient_has_datum(recipient, &datum.id),
+                id: datum.id,
+            };
+            results.insert(datum, novelty);
+            // Push the left and right subsegments onto the queue
+            let left_segment = &segment[1..=index];
+            if let Some((datum, distance, index)) =
+                Self::most_novel_coordinate_in_segment(left_segment)
             {
-                let novelty = Novelty {
-                    distance,
-                    probability_already_transmitted: self
-                        .transmission_history
-                        .probability_recipient_has_datum(recipient, &datum.id),
-                    id: datum.id,
-                };
-                results.insert(datum, novelty);
-                // Push the left and right subsegments onto the queue
-                queue.push_back(&segment[1..=index]);
-                queue.push_back(&segment[index..]);
+                queue.push_back((left_segment, datum, index, distance));
+            }
+            let right_segment = &segment[index..];
+            if let Some((datum, distance, index)) =
+                Self::most_novel_coordinate_in_segment(right_segment)
+            {
+                queue.push_back((right_segment, datum, index, distance));
             }
         }
 
