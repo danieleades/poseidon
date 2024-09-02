@@ -4,13 +4,11 @@ mod positions;
 mod probability;
 
 mod transmission_history;
-use transmission_history::TransmissionHistory;
 
 mod coordinate;
 pub use coordinate::Coordinate;
 
 mod novelty;
-use novelty::Novelty;
 
 type NodeId = Uuid;
 

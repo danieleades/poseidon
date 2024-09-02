@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use std::cmp::Reverse;
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet};
 use uuid::Uuid;
 
 mod geometric_novelty;
@@ -85,23 +85,12 @@ impl Positions {
 
         // Then recursively search the rest of the coordinates.
         let segment = self.data.iter().collect::<Vec<_>>();
-        let mut queue = VecDeque::new();
+        let mut segment_heap = geometric_novelty::MaxHeap::default();
         if let Some((datum, distance, index)) = Self::most_novel_coordinate_in_segment(&segment) {
-            queue.push_back(geometric_novelty::Comparator {
-                segment: &segment[..],
-                datum,
-                distance,
-                index,
-            });
+            segment_heap.push(&segment[..], datum, distance, index);
         }
 
-        while let Some(geometric_novelty::Comparator {
-            segment,
-            datum,
-            distance,
-            index,
-        }) = queue.pop_front()
-        {
+        while let Some((segment, datum, distance, index)) = segment_heap.pop() {
             let novelty = Novelty {
                 distance,
                 probability_already_transmitted: self
@@ -115,23 +104,13 @@ impl Positions {
             if let Some((datum, distance, index)) =
                 Self::most_novel_coordinate_in_segment(left_segment)
             {
-                queue.push_back(geometric_novelty::Comparator {
-                    segment: left_segment,
-                    datum,
-                    distance,
-                    index,
-                });
+                segment_heap.push(left_segment, datum, distance, index);
             }
             let right_segment = &segment[index..];
             if let Some((datum, distance, index)) =
                 Self::most_novel_coordinate_in_segment(right_segment)
             {
-                queue.push_back(geometric_novelty::Comparator {
-                    segment: right_segment,
-                    datum,
-                    distance,
-                    index,
-                });
+                segment_heap.push(right_segment, datum, distance, index);
             }
         }
         results.into_iter().collect()
