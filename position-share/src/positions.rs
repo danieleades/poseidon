@@ -83,34 +83,33 @@ impl Positions {
         results.insert(start, start_novelty);
         results.insert(end, end_novelty);
 
-        // Then recursively search the rest of the coordinates.
         let segment = self.data.iter().collect::<Vec<_>>();
-        let mut segment_heap = geometric_novelty::MaxHeap::default();
-        if let Some((datum, distance, index)) = Self::most_novel_coordinate_in_segment(&segment) {
-            segment_heap.push(&segment[..], datum, distance, index);
-        }
 
+        // Find the most novel coordinate in the first segment.
+        let Some((datum, distance, index)) = Self::most_novel_coordinate_in_segment(&segment)
+        else {
+            return vec![];
+        };
+        let mut segment_heap = geometric_novelty::MaxHeap::default();
+        segment_heap.push(&segment[..], datum, distance, index);
+
+        // Then search the rest of the coordinates.
         while let Some((segment, datum, distance, index)) = segment_heap.pop() {
             let novelty = Novelty {
                 distance,
-                probability_already_transmitted: self
+                probability_not_transmitted: self
                     .transmission_history
-                    .probability_recipient_has_datum(recipient, &datum.id),
+                    .probability_recipient_has_datum(recipient, &datum.id).complement(),
                 id: datum.id,
             };
             results.insert(datum, novelty);
             // Push the left and right subsegments onto the queue
-            let left_segment = &segment[1..=index];
-            if let Some((datum, distance, index)) =
-                Self::most_novel_coordinate_in_segment(left_segment)
-            {
-                segment_heap.push(left_segment, datum, distance, index);
-            }
-            let right_segment = &segment[index..];
-            if let Some((datum, distance, index)) =
-                Self::most_novel_coordinate_in_segment(right_segment)
-            {
-                segment_heap.push(right_segment, datum, distance, index);
+            for segment in [&segment[..=index], &segment[index..]] {
+                if let Some((datum, distance, index)) =
+                    Self::most_novel_coordinate_in_segment(segment)
+                {
+                    segment_heap.push(segment, datum, distance, index);
+                }
             }
         }
         results.into_iter().collect()
@@ -129,9 +128,9 @@ impl Positions {
 
         let create_novelty = |datum: &Datum| Novelty {
             distance,
-            probability_already_transmitted: self
+            probability_not_transmitted: self
                 .transmission_history
-                .probability_recipient_has_datum(recipient, &datum.id),
+                .probability_recipient_has_datum(recipient, &datum.id).complement(),
             id: datum.id,
         };
 
