@@ -52,7 +52,7 @@ fn bench_most_novel_coordinates(c: &mut Criterion) {
             positions.most_novel_coordinates_with_threshold(
                 black_box(&recipient),
                 black_box(100),
-                black_box(0.1),
+                black_box(0.5),
             )
         });
     });
