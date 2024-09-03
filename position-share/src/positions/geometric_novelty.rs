@@ -1,6 +1,6 @@
 use std::collections::BinaryHeap;
 
-use crate::positions::Datum;
+use crate::{positions::Datum, Coordinate};
 
 /// A helper struct for sorting segments of the time-series by the most novel coordinate in the segment.
 ///
@@ -59,4 +59,74 @@ impl<'a, 'b> MaxHeap<'a, 'b> {
              }| (segment, datum, distance, index),
         )
     }
+}
+
+pub trait GeometricNovelty {
+    fn most_novel_coordinate<'a>(&self, segment: &[&'a Datum]) -> Option<(&'a Datum, f64, usize)>;
+}
+
+impl<F> GeometricNovelty for F
+where
+    F: for<'a> Fn(&[&'a Datum]) -> Option<(&'a Datum, f64, usize)>,
+{
+    fn most_novel_coordinate<'a>(&self, segment: &[&'a Datum]) -> Option<(&'a Datum, f64, usize)> {
+        self(segment)
+    }
+}
+
+pub fn rdp<'a>(segment: &[&'a Datum]) -> Option<(&'a Datum, f64, usize)> {
+    // Algorithm:
+    // 1. if there are less than 3 data points, return None
+    // 2. find the most novel datum in the segment, excluding the first and last points
+    // 3. return the most novel datum, its novelty score, and its index
+    if segment.len() < 3 {
+        return None;
+    }
+
+    let start = segment.first().unwrap();
+    let end = segment.last().unwrap();
+
+    segment[1..segment.len() - 1]
+        .iter()
+        .zip(1..)
+        .map(|(datum, i)| {
+            let distance =
+                distance_from_line(&start.coordinate, &end.coordinate, &datum.coordinate);
+            (*datum, distance, i)
+        })
+        .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+}
+
+/// Calculates the perpendicular distance from a coordinate to a line defined by two coordinates.
+fn distance_from_line(start: &Coordinate, end: &Coordinate, coordinate: &Coordinate) -> f64 {
+    // Vector from start to end
+    let line_vector = end - start;
+
+    // Vector from start to the coordinate
+    let point_vector = coordinate - start;
+
+    // Calculate the cross product
+    let cross_product = &line_vector.cross_product(&point_vector);
+
+    // Calculate the magnitude of the cross product
+    let cross_product_magnitude = cross_product.magnitude();
+
+    // Calculate the magnitude of the line vector
+    let line_magnitude = line_vector.magnitude();
+
+    // The perpendicular distance is the magnitude of the cross product divided by the magnitude of the line vector
+    cross_product_magnitude / line_magnitude
+}
+
+fn most_novel_coordinate_in_segment_with_strategy<'a>(
+    strategy: &impl GeometricNovelty,
+    segment: &[&'a Datum],
+) -> Option<(&'a Datum, f64, usize)> {
+    strategy.most_novel_coordinate(segment)
+}
+
+fn most_novel_coordinate_in_segment_with_rdp<'a>(
+    segment: &[&'a Datum],
+) -> Option<(&'a Datum, f64, usize)> {
+    most_novel_coordinate_in_segment_with_strategy(&rdp, segment)
 }
