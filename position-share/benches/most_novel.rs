@@ -1,6 +1,9 @@
 use chrono::{Duration, Utc};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use position_share::{Coordinate, Positions};
+use position_share::{
+    positions::{geometric_novelty::rdp, search_strategy::Search},
+    Coordinate, Positions,
+};
 use uuid::Uuid;
 
 /// Generates a simulated path for an object.
@@ -49,10 +52,10 @@ fn bench_most_novel_coordinates(c: &mut Criterion) {
     let recipient = Uuid::new_v4();
     c.bench_function("most_novel_coordinates", |b| {
         b.iter(|| {
-            positions.most_novel_coordinates_with_threshold(
+            positions.most_novel_coordinates(
+                Search::new(rdp, Some(0.4)),
                 black_box(&recipient),
                 black_box(100),
-                black_box(0.5),
             )
         });
     });

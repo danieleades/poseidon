@@ -118,15 +118,25 @@ fn distance_from_line(start: &Coordinate, end: &Coordinate, coordinate: &Coordin
     cross_product_magnitude / line_magnitude
 }
 
-fn most_novel_coordinate_in_segment_with_strategy<'a>(
-    strategy: &impl GeometricNovelty,
-    segment: &[&'a Datum],
-) -> Option<(&'a Datum, f64, usize)> {
-    strategy.most_novel_coordinate(segment)
-}
+#[cfg(test)]
+mod tests {
+    use float_cmp::assert_approx_eq;
 
-fn most_novel_coordinate_in_segment_with_rdp<'a>(
-    segment: &[&'a Datum],
-) -> Option<(&'a Datum, f64, usize)> {
-    most_novel_coordinate_in_segment_with_strategy(&rdp, segment)
+    use super::*;
+
+    #[test]
+    fn test_distance_from_line() {
+        let start = Coordinate::new(0.0, 0.0, 0.0);
+        let end = Coordinate::new(1.0, 1.0, 1.0);
+        let coordinate = Coordinate::new(0.5, 0.5, 0.5);
+        assert_approx_eq!(f64, distance_from_line(&start, &end, &coordinate), 0.0);
+    }
+
+    #[test]
+    fn test_distance_from_line2() {
+        let start = Coordinate::new(0.0, 0.0, 0.0);
+        let end = Coordinate::new(4.0, 0.0, 0.0);
+        let coordinate = Coordinate::new(2.0, 2.0, 0.0);
+        assert_approx_eq!(f64, distance_from_line(&start, &end, &coordinate), 2.0);
+    }
 }
