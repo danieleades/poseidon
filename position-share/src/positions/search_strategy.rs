@@ -9,17 +9,18 @@ use super::{
 
 /// A search strategy for finding the most novel positions in a time-series.
 pub trait SearchStrategy {
-    fn search<'a, 'b>(
+    fn search<'a>(
         &self,
         transmission_history: &TransmissionHistory,
-        positions: &'a [&'b Datum],
+        positions: &[&'a Datum],
         n_max: usize,
         recipient: &NodeId,
-    ) -> Vec<&'b Datum>;
+    ) -> Vec<&'a Datum>;
 }
 
-/// A search strategy which searches recursively through the time-series by first finding the most geometrically novel coordinate
-/// and then recursively searching the left and right subsegments on either side of it.
+/// A search strategy which searches recursively through the time-series.
+/// 
+/// It first finds the most geometrically novel coordinate and then recursively searches the left and right subsegments on either side of it.
 ///
 /// The strategy for determining the most novel coordinate in a segment is provided by the `GeometricNovelty` trait.
 pub struct Search<S>
@@ -34,13 +35,13 @@ impl<S> SearchStrategy for Search<S>
 where
     S: GeometricNovelty,
 {
-    fn search<'a, 'b>(
+    fn search<'a>(
         &self,
         transmission_history: &TransmissionHistory,
-        positions: &'a [&'b Datum],
+        positions: &[&'a Datum],
         n_max: usize,
         recipient: &NodeId,
-    ) -> Vec<&'b Datum> {
+    ) -> Vec<&'a Datum> {
         // First consider the first and last coordinates.
         let (start_novelty, end_novelty) = start_and_end_point_novelty(positions);
 
@@ -73,7 +74,7 @@ where
             return vec![];
         };
         let mut segment_heap = MaxHeap::default();
-        segment_heap.push(&positions[..], datum, distance, index);
+        segment_heap.push(positions, datum, distance, index);
 
         // Then search the rest of the coordinates.
         while let Some((segment, datum, distance, index)) = segment_heap.pop() {
@@ -115,7 +116,7 @@ where
     /// Create a new search strategy.
     ///
     /// If `threshold` is provided, the search stops when the geometric novelty of a subsegment is less than `threshold` times the geometric novelty of its parent segment.
-    pub fn new(strategy: S, threshold: Option<f64>) -> Self {
+    pub const fn new(strategy: S, threshold: Option<f64>) -> Self {
         Self {
             strategy,
             threshold,
@@ -197,6 +198,7 @@ pub struct Novelty {
 }
 
 impl Novelty {
+    #[must_use]
     pub fn score(&self) -> f64 {
         self.distance * self.probability_not_transmitted
     }

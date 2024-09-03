@@ -74,6 +74,7 @@ where
     }
 }
 
+#[must_use]
 pub fn rdp<'a>(segment: &[&'a Datum]) -> Option<(&'a Datum, f64, usize)> {
     // Algorithm:
     // 1. if there are less than 3 data points, return None

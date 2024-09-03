@@ -53,7 +53,7 @@ impl Positions {
     #[must_use]
     pub fn most_novel_coordinates(
         &self,
-        strategy: impl SearchStrategy,
+        strategy: &impl SearchStrategy,
         recipient: &NodeId,
         n_max: usize,
     ) -> Vec<&Datum> {
@@ -119,7 +119,7 @@ mod tests {
 
         let search_strategy = Search::new(rdp, None);
 
-        let most_novel = positions.most_novel_coordinates(search_strategy, &NodeId::new_v4(), 3);
+        let most_novel = positions.most_novel_coordinates(&search_strategy, &NodeId::new_v4(), 3);
 
         // Assert that we got the correct number of results
         assert_eq!(most_novel.len(), 3);
