@@ -7,13 +7,13 @@ use crate::probability::Probability;
 #[derive(Debug, PartialEq)]
 pub struct Novelty {
     pub distance: f64,
-    pub probability_already_transmitted: Probability,
+    pub probability_not_transmitted: Probability,
     pub id: Uuid,
 }
 
 impl Novelty {
     pub fn score(&self) -> f64 {
-        self.distance * self.probability_already_transmitted.complement()
+        self.distance * self.probability_not_transmitted
     }
 }
 
@@ -23,8 +23,8 @@ impl Ord for Novelty {
             .partial_cmp(&other.score())
             .unwrap_or(Ordering::Equal)
             .then_with(|| {
-                self.probability_already_transmitted
-                    .cmp(&other.probability_already_transmitted)
+                self.probability_not_transmitted
+                    .cmp(&other.probability_not_transmitted)
             })
             .then_with(|| self.id.cmp(&other.id))
     }
@@ -46,12 +46,12 @@ mod tests {
     fn compare() {
         let a = Novelty {
             distance: 2.0,
-            probability_already_transmitted: Probability::ZERO,
+            probability_not_transmitted: Probability::ONE_HUNDRED,
             id: Uuid::new_v4(),
         };
         let b = Novelty {
             distance: 1.0,
-            probability_already_transmitted: Probability::ZERO,
+            probability_not_transmitted: Probability::ONE_HUNDRED,
             id: Uuid::new_v4(),
         };
         assert!(a > b);
