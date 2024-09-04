@@ -10,6 +10,8 @@ use std::collections::BinaryHeap;
 
 use crate::{positions::Datum, Coordinate};
 
+use super::search_strategy::Segment;
+
 /// A helper struct for sorting segments of the time-series by the most novel
 /// coordinate in the segment.
 ///
@@ -17,7 +19,7 @@ use crate::{positions::Datum, Coordinate};
 /// max-heap.
 #[derive(Debug, PartialEq)]
 struct Comparator<'a, 'b> {
-    pub segment: &'a [&'b Datum],
+    pub segment: Segment<'a, 'b>,
     pub datum: &'b Datum,
     pub distance: f64,
     pub index: usize,
@@ -47,7 +49,7 @@ pub struct MaxHeap<'a, 'b>(BinaryHeap<Comparator<'a, 'b>>);
 impl<'a, 'b> MaxHeap<'a, 'b> {
     pub fn push(
         &mut self,
-        segment: &'a [&'b Datum],
+        segment: Segment<'a, 'b>,
         datum: &'b Datum,
         distance: f64,
         index: usize,
@@ -60,7 +62,7 @@ impl<'a, 'b> MaxHeap<'a, 'b> {
         });
     }
 
-    pub fn pop(&mut self) -> Option<(&'a [&'b Datum], &'b Datum, f64, usize)> {
+    pub fn pop(&mut self) -> Option<(Segment<'a, 'b>, &'b Datum, f64, usize)> {
         self.0.pop().map(
             |Comparator {
                  segment,
@@ -79,14 +81,14 @@ pub trait GeometricNovelty {
     ///
     /// The first and last should be excluded. Only the interior points should
     /// be considered as candidates for the most novel coordinate.
-    fn most_novel_coordinate<'a>(&self, segment: &[&'a Datum]) -> Option<(&'a Datum, f64, usize)>;
+    fn most_novel_coordinate<'a>(&self, segment: Segment<'_, 'a>) -> (&'a Datum, f64, usize);
 }
 
 impl<F> GeometricNovelty for F
 where
-    F: for<'a> Fn(&[&'a Datum]) -> Option<(&'a Datum, f64, usize)>,
+    F: for<'a> Fn(Segment<'_, 'a>) -> (&'a Datum, f64, usize),
 {
-    fn most_novel_coordinate<'a>(&self, segment: &[&'a Datum]) -> Option<(&'a Datum, f64, usize)> {
+    fn most_novel_coordinate<'a>(&self, segment: Segment<'_, 'a>) -> (&'a Datum, f64, usize) {
         self(segment)
     }
 }
@@ -94,32 +96,23 @@ where
 /// A 3D version of the [Ramer-Douglas-Peucker algorithm](https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm) for calculating geometric novelty.
 #[must_use]
 #[allow(clippy::missing_panics_doc)]
-pub fn rdp<'a>(segment: &[&'a Datum]) -> Option<(&'a Datum, f64, usize)> {
+pub fn rdp<'a>(segment: Segment<'_, 'a>) -> (&'a Datum, f64, usize) {
     // Algorithm:
     // 1. if there are less than 3 data points, return None
     // 2. find the most novel datum in the segment, excluding the first and last
     //    points
     // 3. return the most novel datum, its novelty score, and its index
-    if segment.len() < 3 {
-        return None;
-    }
 
-    // These are safe to unwrap because we know the length of the segment is at
-    // least 3
-    #[allow(clippy::unwrap_used)]
-    let start = segment.first().unwrap();
-    #[allow(clippy::unwrap_used)]
-    let end = segment.last().unwrap();
-
-    segment[1..segment.len() - 1]
+    segment.middle()
         .iter()
         .zip(1..)
         .map(|(datum, i)| {
             let distance =
-                distance_from_line(&start.coordinate, &end.coordinate, &datum.coordinate);
+                distance_from_line(&segment.start().coordinate, &segment.end().coordinate, &datum.coordinate);
             (*datum, distance, i)
         })
         .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+        .unwrap()
 }
 
 /// Calculates the perpendicular distance from a coordinate to a line defined by

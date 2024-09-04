@@ -14,6 +14,7 @@
 //! See [`rdp`](crate::positions::geometric_novelty::rdp) for an example of a
 //! geometric novelty strategy which can be used with [`Search`].
 
+use std::cmp::Ordering;
 use std::{cmp::Reverse, collections::BTreeMap};
 
 use super::{
@@ -21,18 +22,76 @@ use super::{
     Datum,
 };
 use crate::{probability::Probability, transmission_history::TransmissionHistory, NodeId};
+use uuid::Uuid;
 
 /// A search strategy for finding the most novel positions in a time-series.
 pub trait SearchStrategy {
     fn search<'a>(
         &self,
         transmission_history: &TransmissionHistory,
-        positions: &[&'a Datum],
+        positions: Segment<'_, 'a>,
         n_max: usize,
         recipient: &NodeId,
     ) -> Vec<&'a Datum>;
 }
 
+#[derive(Debug, PartialEq, Clone, Copy, Eq)]
+pub struct Segment<'a, 'b> {
+    /// The first point in the segment.
+    start: &'b Datum,
+    /// The middle points in the segment.
+    /// 
+    /// Guaranteed to be non-empty.
+    middle: &'a [&'b Datum],
+    /// The last point in the segment.
+    end: &'b Datum,
+}
+
+impl<'a, 'b> Segment<'a, 'b> {
+    pub const fn start(&self) -> &'b Datum {
+        self.start
+    }
+
+    pub const fn middle(&self) -> &'a [&'b Datum] {
+        self.middle
+    }
+
+    pub const fn end(&self) -> &'b Datum {
+        self.end
+    }
+
+    pub const fn split_at(self, index: usize) -> (Option<Self>, Option<Self>) {
+        if index == 0 {
+            return (None, Some(self));
+        }
+        if index == self.middle.len() {
+            return (Some(self), None);
+        }
+        let (left, right) = self.middle.split_at(index);
+        (Some(Segment { start: self.start, middle: left, end: self.middle[index - 1] }), Some(Segment { start: self.middle[index], middle: right, end: self.end }))
+    }
+}
+
+impl<'a, 'b> TryFrom<&'a [&'b Datum]> for Segment<'a, 'b> {
+    type Error = ();
+
+    /// Creates a new segment from a slice of positions.
+    /// 
+    /// # Errors
+    /// 
+    /// Returns an error if the slice has less than 3 positions. This guarantees
+    /// that the segment has at least one middle point.
+    fn try_from(positions: &'a [&'b Datum]) -> Result<Self, Self::Error> {
+        if positions.len() < 3 {
+            return Err(());
+        }
+        Ok(Self {
+            start: positions[0],
+            middle: &positions[1..positions.len() - 1],
+            end: positions[positions.len() - 1],
+        })
+    }
+}
 /// A search strategy which searches recursively through the time-series.
 ///
 /// It first finds the most geometrically novel coordinate and then recursively
@@ -73,16 +132,16 @@ where
     fn search<'a>(
         &self,
         transmission_history: &TransmissionHistory,
-        positions: &[&'a Datum],
+        positions: Segment<'_, 'a>,
         n_max: usize,
         recipient: &NodeId,
     ) -> Vec<&'a Datum> {
         // First consider the first and last coordinates.
-        let (start_novelty, end_novelty) = start_and_end_point_novelty(positions);
+        let (start_novelty, end_novelty) = start_and_end_point_novelty(positions.start(), positions.end());
 
         let mut results = Results::new(n_max);
-        let first_datum = positions.first().unwrap();
-        let last_datum = positions.last().unwrap();
+        let first_datum = positions.start();
+        let last_datum = positions.end();
         results.insert(
             first_datum,
             Novelty {
@@ -105,9 +164,7 @@ where
         );
 
         // Find the most novel coordinate in the first segment.
-        let Some((datum, distance, index)) = self.strategy.most_novel_coordinate(positions) else {
-            return vec![];
-        };
+        let (datum, distance, index) = self.strategy.most_novel_coordinate(positions);
         let mut segment_heap = MaxHeap::default();
         segment_heap.push(positions, datum, distance, index);
 
@@ -134,11 +191,12 @@ where
                 results.insert(datum, novelty);
             }
             // Push the left and right subsegments onto the queue
-            for segment in [&segment[..=index], &segment[index..]] {
-                if let Some((datum, distance, index)) = self.strategy.most_novel_coordinate(segment)
-                {
+
+            let (left_segment, right_segment) = segment.split_at(index);
+
+            for segment in [left_segment, right_segment].into_iter().flatten() {
+                    let (datum, distance, index) = self.strategy.most_novel_coordinate(segment);
                     segment_heap.push(segment, datum, distance, index);
-                }
             }
         }
         results.into_iter().collect()
@@ -165,9 +223,7 @@ where
 /// Returns the geometric novelty scores for the start and end coordinates.
 ///
 /// The novelty score is the distance between them
-fn start_and_end_point_novelty(positions: &[&Datum]) -> (f64, f64) {
-    let start = positions.first().unwrap();
-    let end = positions.last().unwrap();
+fn start_and_end_point_novelty(start: &Datum, end: &Datum) -> (f64, f64) {
     let distance = (start.coordinate - end.coordinate).magnitude();
 
     (distance, distance)
@@ -227,10 +283,6 @@ impl<'a> IntoIterator for Results<'a> {
     }
 }
 
-use std::cmp::Ordering;
-
-use uuid::Uuid;
-
 #[derive(Debug, PartialEq)]
 pub struct Novelty {
     pub distance: f64,
@@ -268,6 +320,10 @@ impl Eq for Novelty {}
 
 #[cfg(test)]
 mod tests {
+    use chrono::Utc;
+
+    use crate::Coordinate;
+
     use super::*;
 
     #[test]

@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 
 use chrono::{DateTime, Utc};
-use search_strategy::SearchStrategy;
+use search_strategy::{SearchStrategy, Segment};
 use uuid::Uuid;
 
 pub mod geometric_novelty;
@@ -62,9 +62,13 @@ impl Positions {
         recipient: &NodeId,
         n_max: usize,
     ) -> Vec<&Datum> {
+        let positions = self.data.iter().collect::<Vec<_>>();
+        let Ok(segment) = Segment::try_from(&positions[..]) else {
+            return Vec::new();
+        };
         strategy.search(
             &self.transmission_history,
-            &self.data.iter().collect::<Vec<_>>(),
+            segment,
             n_max,
             recipient,
         )
