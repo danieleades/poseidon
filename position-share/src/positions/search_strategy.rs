@@ -210,7 +210,7 @@ impl<'a> Results<'a> {
 
 impl<'a> IntoIterator for Results<'a> {
     type Item = &'a Datum;
-    type IntoIter = impl Iterator<Item = Self::Item>;
+    type IntoIter = std::collections::btree_map::IntoValues<Reverse<Novelty>, &'a Datum>;
 
     /// Returns an iterator over the results.
     ///

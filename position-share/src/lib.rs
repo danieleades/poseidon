@@ -4,7 +4,6 @@
 //!
 //! It also has support for situations where nodes have incomplete knowledge of which data points the other nodes have already received.
 
-#![feature(impl_trait_in_assoc_type)]
 use uuid::Uuid;
 mod positions;
 mod probability;
