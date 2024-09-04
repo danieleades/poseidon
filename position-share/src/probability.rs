@@ -14,8 +14,8 @@ impl std::ops::Mul<Probability> for f64 {
 }
 
 impl Probability {
-    pub const ZERO: Self = Self { value: 0 };
     pub const ONE_HUNDRED: Self = Self { value: u32::MAX };
+    pub const ZERO: Self = Self { value: 0 };
 
     #[must_use]
     pub const fn new(value: u32) -> Self {
@@ -35,7 +35,8 @@ impl TryFrom<f64> for Probability {
 
     /// Converts a f64 value to a Probability.
     ///
-    /// The value must be between 0.0 and 100.0 (corresponding to 0% and 100% respectively).
+    /// The value must be between 0.0 and 100.0 (corresponding to 0% and 100%
+    /// respectively).
     ///
     /// # Errors
     ///
@@ -55,7 +56,8 @@ impl TryFrom<f64> for Probability {
 impl From<Probability> for f64 {
     /// Converts a Probability to a f64.
     ///
-    /// The returned value is between 0.0 and 100.0, where 100.0 corresponds to 100% probability.
+    /// The returned value is between 0.0 and 100.0, where 100.0 corresponds to
+    /// 100% probability.
     fn from(value: Probability) -> Self {
         Self::from(value.value) / Self::from(u32::MAX) * 100.0
     }

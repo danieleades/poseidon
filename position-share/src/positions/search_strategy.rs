@@ -1,23 +1,26 @@
-//! A search strategy is used to find the most novel coordinates in a time-series.
+//! A search strategy is used to find the most novel coordinates in a
+//! time-series.
 //!
-//! It should traverse the time-series and find the most novel coordinates according to some heuristic.
+//! It should traverse the time-series and find the most novel coordinates
+//! according to some heuristic.
 //!
 //! In general, search strategies may include:
 //!  - recursively searching subsegments of the path
 //!  - iteratively simplifying the path
 //!
-//! This module provides a framework for pluggable search strategies, and provides a 'recursive search' strategy ([`Search`]).
+//! This module provides a framework for pluggable search strategies, and
+//! provides a 'recursive search' strategy ([`Search`]).
 //!
-//! See [`rdp`](crate::positions::geometric_novelty::rdp) for an example of a geometric novelty strategy which can be used with [`Search`].
+//! See [`rdp`](crate::positions::geometric_novelty::rdp) for an example of a
+//! geometric novelty strategy which can be used with [`Search`].
 
 use std::{cmp::Reverse, collections::BTreeMap};
-
-use crate::{probability::Probability, transmission_history::TransmissionHistory, NodeId};
 
 use super::{
     geometric_novelty::{GeometricNovelty, MaxHeap},
     Datum,
 };
+use crate::{probability::Probability, transmission_history::TransmissionHistory, NodeId};
 
 /// A search strategy for finding the most novel positions in a time-series.
 pub trait SearchStrategy {
@@ -32,18 +35,16 @@ pub trait SearchStrategy {
 
 /// A search strategy which searches recursively through the time-series.
 ///
-/// It first finds the most geometrically novel coordinate and then recursively searches the left and right subsegments on either side of it.
+/// It first finds the most geometrically novel coordinate and then recursively
+/// searches the left and right subsegments on either side of it.
 ///
-/// The strategy for determining the most novel coordinate in a segment is provided by the `GeometricNovelty` trait.
+/// The strategy for determining the most novel coordinate in a segment is
+/// provided by the `GeometricNovelty` trait.
 ///
 /// # Example
 /// ```
 /// use chrono::Utc;
-/// use position_share::{
-///     positions::geometric_novelty::rdp, positions::search_strategy::Search, Coordinate, NodeId,
-///     Positions,
-/// };
-/// use uuid::Uuid;
+/// use position_share::{rdp, Coordinate, NodeId, Positions, Search};
 ///
 /// let mut positions = Positions::default();
 /// positions.add(Utc::now(), Coordinate::new(0.0, 0.0, 0.0));
@@ -127,7 +128,8 @@ where
                 }
             }
 
-            // Only insert the datum if the recipient has a non-zero probability of not having received it yet.
+            // Only insert the datum if the recipient has a non-zero probability of not
+            // having received it yet.
             if novelty.probability_not_transmitted > Probability::ZERO {
                 results.insert(datum, novelty);
             }
@@ -149,7 +151,9 @@ where
 {
     /// Create a new search strategy.
     ///
-    /// If `threshold` is provided, the search stops when the geometric novelty of a subsegment is less than `threshold` times the geometric novelty of its parent segment.
+    /// If `threshold` is provided, the search stops when the geometric novelty
+    /// of a subsegment is less than `threshold` times the geometric novelty of
+    /// its parent segment.
     pub const fn new(strategy: S, threshold: Option<f64>) -> Self {
         Self {
             strategy,
@@ -184,12 +188,14 @@ impl<'a> Results<'a> {
         }
     }
 
-    /// Inserts a new datum into the results, keeping only the `n_max` most novel results.
+    /// Inserts a new datum into the results, keeping only the `n_max` most
+    /// novel results.
     fn insert(&mut self, datum: &'a Datum, novelty: Novelty) {
         // There are less results than the maximum, so insert it with no further checks.
         if self.data.len() < self.n_max {
             self.data.insert(Reverse(novelty), datum);
-        // The results are full, so only insert the datum if it is more novel than the least novel result.
+        // The results are full, so only insert the datum if it is more novel
+        // than the least novel result.
         } else if let Some(min_novelty) = self.min_novelty() {
             if novelty > *min_novelty {
                 self.data.pop_last();
@@ -199,7 +205,8 @@ impl<'a> Results<'a> {
         // Only reachable if n_max is 0, meaning we don't want any results.
     }
 
-    /// Returns the novelty score of the least novel coordinate in the results or 0.0 if the results are empty.
+    /// Returns the novelty score of the least novel coordinate in the results
+    /// or 0.0 if the results are empty.
     fn min_novelty(&self) -> Option<&Novelty> {
         self.data
             .keys()
@@ -209,8 +216,8 @@ impl<'a> Results<'a> {
 }
 
 impl<'a> IntoIterator for Results<'a> {
-    type Item = &'a Datum;
     type IntoIter = std::collections::btree_map::IntoValues<Reverse<Novelty>, &'a Datum>;
+    type Item = &'a Datum;
 
     /// Returns an iterator over the results.
     ///

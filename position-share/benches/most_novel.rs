@@ -5,8 +5,9 @@ use uuid::Uuid;
 
 /// Generates a simulated path for an object.
 ///
-/// This function creates a 3D path that represents the movement of an object over time.
-/// The path is generated using parametric equations to simulate realistic movement.
+/// This function creates a 3D path that represents the movement of an object
+/// over time. The path is generated using parametric equations to simulate
+/// realistic movement.
 ///
 /// # Arguments
 ///
@@ -14,7 +15,8 @@ use uuid::Uuid;
 ///
 /// # Returns
 ///
-/// A `Positions` object containing the generated path points with their corresponding timestamps.
+/// A `Positions` object containing the generated path points with their
+/// corresponding timestamps.
 #[allow(clippy::suboptimal_flops)]
 fn generate_path(num_points: usize) -> Positions {
     let mut positions = Positions::default();
@@ -26,7 +28,8 @@ fn generate_path(num_points: usize) -> Positions {
         let t = i as f64 / num_points as f64;
 
         // Simulate a 3D curve representing more complex movement
-        // X-coordinate: Combination of sinusoidal motions with different frequencies and amplitudes
+        // X-coordinate: Combination of sinusoidal motions with different frequencies
+        // and amplitudes
         let x = 1000.0 * t.sin() + 300.0 * (3.0 * t).cos() + 150.0 * (5.0 * t).sin();
         // Y-coordinate: Combination of sinusoidal and polynomial functions
         let y = 500.0 * (2.0 * t).sin() + 200.0 * t.powi(2) - 100.0 * (4.0 * t).cos();

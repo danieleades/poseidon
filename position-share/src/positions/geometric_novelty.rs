@@ -1,6 +1,8 @@
-//! 'Geometric novelty' is a measure of how important a coordinate is in describing the overall path.
+//! 'Geometric novelty' is a measure of how important a coordinate is in
+//! describing the overall path.
 //!
-//! There are different algorithms for calculating geometric novelty, and this crate provides a framework for plugging in different algorithms.
+//! There are different algorithms for calculating geometric novelty, and this
+//! crate provides a framework for plugging in different algorithms.
 //!
 //! An implementation of the [Ramer-Douglas-Peucker algorithm](https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm) is provided.
 
@@ -8,9 +10,11 @@ use std::collections::BinaryHeap;
 
 use crate::{positions::Datum, Coordinate};
 
-/// A helper struct for sorting segments of the time-series by the most novel coordinate in the segment.
+/// A helper struct for sorting segments of the time-series by the most novel
+/// coordinate in the segment.
 ///
-/// This struct is a wrapper placed in a [`BinaryHeap`] in order to create a max-heap.
+/// This struct is a wrapper placed in a [`BinaryHeap`] in order to create a
+/// max-heap.
 #[derive(Debug, PartialEq)]
 struct Comparator<'a, 'b> {
     pub segment: &'a [&'b Datum],
@@ -35,7 +39,8 @@ impl<'a, 'b> PartialOrd for Comparator<'a, 'b> {
 
 impl<'a, 'b> Eq for Comparator<'a, 'b> {}
 
-/// A max-heap used to store segments of the time-series sorted by the most geometrically novel coordinate in the segment.
+/// A max-heap used to store segments of the time-series sorted by the most
+/// geometrically novel coordinate in the segment.
 #[derive(Debug, Default)]
 pub struct MaxHeap<'a, 'b>(BinaryHeap<Comparator<'a, 'b>>);
 
@@ -67,11 +72,13 @@ impl<'a, 'b> MaxHeap<'a, 'b> {
     }
 }
 
-/// A trait for calculating the most novel coordinate in a segment of the time-series.
+/// A trait for calculating the most novel coordinate in a segment of the
+/// time-series.
 pub trait GeometricNovelty {
     /// Calculates the most novel coordinate in a segment of the time-series.
     ///
-    /// The first and last should be excluded. Only the interior points should be considered as candidates for the most novel coordinate.
+    /// The first and last should be excluded. Only the interior points should
+    /// be considered as candidates for the most novel coordinate.
     fn most_novel_coordinate<'a>(&self, segment: &[&'a Datum]) -> Option<(&'a Datum, f64, usize)>;
 }
 
@@ -90,13 +97,15 @@ where
 pub fn rdp<'a>(segment: &[&'a Datum]) -> Option<(&'a Datum, f64, usize)> {
     // Algorithm:
     // 1. if there are less than 3 data points, return None
-    // 2. find the most novel datum in the segment, excluding the first and last points
+    // 2. find the most novel datum in the segment, excluding the first and last
+    //    points
     // 3. return the most novel datum, its novelty score, and its index
     if segment.len() < 3 {
         return None;
     }
 
-    // These are safe to unwrap because we know the length of the segment is at least 3
+    // These are safe to unwrap because we know the length of the segment is at
+    // least 3
     #[allow(clippy::unwrap_used)]
     let start = segment.first().unwrap();
     #[allow(clippy::unwrap_used)]
@@ -113,7 +122,8 @@ pub fn rdp<'a>(segment: &[&'a Datum]) -> Option<(&'a Datum, f64, usize)> {
         .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
 }
 
-/// Calculates the perpendicular distance from a coordinate to a line defined by two coordinates.
+/// Calculates the perpendicular distance from a coordinate to a line defined by
+/// two coordinates.
 fn distance_from_line(start: &Coordinate, end: &Coordinate, coordinate: &Coordinate) -> f64 {
     // Vector from start to end
     let line_vector = end - start;
@@ -130,7 +140,8 @@ fn distance_from_line(start: &Coordinate, end: &Coordinate, coordinate: &Coordin
     // Calculate the magnitude of the line vector
     let line_magnitude = line_vector.magnitude();
 
-    // The perpendicular distance is the magnitude of the cross product divided by the magnitude of the line vector
+    // The perpendicular distance is the magnitude of the cross product divided by
+    // the magnitude of the line vector
     cross_product_magnitude / line_magnitude
 }
 
