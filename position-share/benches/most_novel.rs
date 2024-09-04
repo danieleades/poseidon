@@ -18,6 +18,7 @@ use uuid::Uuid;
 /// # Returns
 ///
 /// A `Positions` object containing the generated path points with their corresponding timestamps.
+#[allow(clippy::suboptimal_flops)]
 fn generate_path(num_points: usize) -> Positions {
     let mut positions = Positions::default();
     let start_time = Utc::now();
@@ -53,7 +54,7 @@ fn bench_most_novel_coordinates(c: &mut Criterion) {
     c.bench_function("most_novel_coordinates", |b| {
         b.iter(|| {
             positions.most_novel_coordinates(
-                Search::new(rdp, Some(0.4)),
+                &Search::new(rdp, Some(0.4)),
                 black_box(&recipient),
                 black_box(100),
             )

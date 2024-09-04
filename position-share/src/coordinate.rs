@@ -59,6 +59,8 @@ impl Vector {
 
 #[cfg(test)]
 mod tests {
+    use float_cmp::assert_approx_eq;
+
     use super::*;
 
     #[test]
@@ -72,6 +74,6 @@ mod tests {
     #[test]
     fn test_magnitude() {
         let v = Vector::new(3.0, 4.0, 0.0);
-        assert_eq!(v.magnitude(), 5.0);
+        assert_approx_eq!(f64, v.magnitude(), 5.0);
     }
 }

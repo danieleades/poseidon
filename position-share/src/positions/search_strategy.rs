@@ -1,3 +1,15 @@
+//! A search strategy is used to find the most novel coordinates in a time-series.
+//!
+//! It should traverse the time-series and find the most novel coordinates according to some heuristic.
+//!
+//! In general, search strategies may include:
+//!  - recursively searching subsegments of the path
+//!  - iteratively simplifying the path
+//!
+//! This module provides a framework for pluggable search strategies, and provides a 'recursive search' strategy ([`Search`]).
+//!
+//! See [`rdp`](crate::positions::geometric_novelty::rdp) for an example of a geometric novelty strategy which can be used with [`Search`].
+
 use std::{cmp::Reverse, collections::BTreeMap};
 
 use crate::{probability::Probability, transmission_history::TransmissionHistory, NodeId};
@@ -19,10 +31,32 @@ pub trait SearchStrategy {
 }
 
 /// A search strategy which searches recursively through the time-series.
-/// 
+///
 /// It first finds the most geometrically novel coordinate and then recursively searches the left and right subsegments on either side of it.
 ///
 /// The strategy for determining the most novel coordinate in a segment is provided by the `GeometricNovelty` trait.
+///
+/// # Example
+/// ```
+/// use chrono::Utc;
+/// use position_share::{
+///     positions::geometric_novelty::rdp, positions::search_strategy::Search, Coordinate, NodeId,
+///     Positions,
+/// };
+/// use uuid::Uuid;
+///
+/// let mut positions = Positions::default();
+/// positions.add(Utc::now(), Coordinate::new(0.0, 0.0, 0.0));
+/// positions.add(Utc::now(), Coordinate::new(1.0, 1.0, 0.0));
+/// positions.add(Utc::now(), Coordinate::new(2.0, 2.0, 0.0));
+/// positions.add(Utc::now(), Coordinate::new(3.0, 1.0, 0.0));
+/// positions.add(Utc::now(), Coordinate::new(4.0, 0.0, 0.0));
+///
+/// let search_strategy = Search::new(rdp, None);
+/// let recipient = NodeId::new_v4();
+///
+/// let most_novel = positions.most_novel_coordinates(&search_strategy, &recipient, 3);
+/// ```
 pub struct Search<S>
 where
     S: GeometricNovelty,

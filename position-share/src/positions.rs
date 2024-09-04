@@ -23,7 +23,8 @@ pub struct Positions {
 impl Positions {
     /// Adds a new position to the collection.
     ///
-    /// TODO: This currently assumes that the timestamp is later than any previously added timestamp (without checking).
+    /// This method inserts a new data point into the collection with the specified timestamp and coordinate.
+    /// The method returns the ID of the newly added data point.
     pub fn add(&mut self, timestamp: DateTime<Utc>, position: Coordinate) -> Uuid {
         let id = Uuid::new_v4();
         self.data.insert(Datum {

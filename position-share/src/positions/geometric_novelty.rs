@@ -1,3 +1,9 @@
+//! 'Geometric novelty' is a measure of how important a coordinate is in describing the overall path.
+//!
+//! There are different algorithms for calculating geometric novelty, and this crate provides a framework for plugging in different algorithms.
+//!
+//! An implementation of the [Ramer-Douglas-Peucker algorithm](https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm) is provided.
+
 use std::collections::BinaryHeap;
 
 use crate::{positions::Datum, Coordinate};
@@ -6,7 +12,7 @@ use crate::{positions::Datum, Coordinate};
 ///
 /// This struct is a wrapper placed in a [`BinaryHeap`] in order to create a max-heap.
 #[derive(Debug, PartialEq)]
-pub struct Comparator<'a, 'b> {
+struct Comparator<'a, 'b> {
     pub segment: &'a [&'b Datum],
     pub datum: &'b Datum,
     pub distance: f64,
@@ -62,6 +68,9 @@ impl<'a, 'b> MaxHeap<'a, 'b> {
 }
 
 pub trait GeometricNovelty {
+    /// Calculates the most novel coordinate in a segment of the time-series.
+    ///
+    /// The first and last should be excluded. Only the interior points should be considered as candidates for the most novel coordinate.
     fn most_novel_coordinate<'a>(&self, segment: &[&'a Datum]) -> Option<(&'a Datum, f64, usize)>;
 }
 
@@ -74,7 +83,9 @@ where
     }
 }
 
+/// A 3D version of the [Ramer-Douglas-Peucker algorithm](https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm) for calculating geometric novelty.
 #[must_use]
+#[allow(clippy::missing_panics_doc)]
 pub fn rdp<'a>(segment: &[&'a Datum]) -> Option<(&'a Datum, f64, usize)> {
     // Algorithm:
     // 1. if there are less than 3 data points, return None
@@ -84,7 +95,10 @@ pub fn rdp<'a>(segment: &[&'a Datum]) -> Option<(&'a Datum, f64, usize)> {
         return None;
     }
 
+    // These are safe to unwrap because we know the length of the segment is at least 3
+    #[allow(clippy::unwrap_used)]
     let start = segment.first().unwrap();
+    #[allow(clippy::unwrap_used)]
     let end = segment.last().unwrap();
 
     segment[1..segment.len() - 1]
