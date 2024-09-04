@@ -6,7 +6,8 @@ use crate::{probability::Probability, NodeId};
 
 /// Keeps track of the transmission history of a datum.
 ///
-/// Records the probability that a datum has been successfully transmitted to a given recipient.
+/// Records the probability that a datum has been successfully transmitted to a
+/// given recipient.
 #[derive(Debug, Clone, Default)]
 pub struct TransmissionHistory {
     /// Maps a recipient to a map of datums to their transmission probabilities.

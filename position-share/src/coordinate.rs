@@ -30,6 +30,7 @@ impl<'a> std::ops::Sub for &'a Coordinate {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Copy)]
 pub struct Vector {
     pub x: f64,
     pub y: f64,
@@ -53,5 +54,26 @@ impl Vector {
     #[allow(clippy::suboptimal_flops)] // benchmarking shows this is actually faster
     pub fn magnitude(&self) -> f64 {
         (self.x.powi(2) + self.y.powi(2) + self.z.powi(2)).sqrt()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use float_cmp::assert_approx_eq;
+
+    use super::*;
+
+    #[test]
+    fn test_cross_product() {
+        let v1 = Vector::new(1.0, 2.0, 3.0);
+        let v2 = Vector::new(4.0, 5.0, 6.0);
+        let expected = Vector::new(-3.0, 6.0, -3.0);
+        assert_eq!(v1.cross_product(&v2), expected);
+    }
+
+    #[test]
+    fn test_magnitude() {
+        let v = Vector::new(3.0, 4.0, 0.0);
+        assert_approx_eq!(f64, v.magnitude(), 5.0);
     }
 }
