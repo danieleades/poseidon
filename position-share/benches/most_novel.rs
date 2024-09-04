@@ -1,9 +1,6 @@
 use chrono::{Duration, Utc};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use position_share::{
-    positions::{geometric_novelty::rdp, search_strategy::Search},
-    Coordinate, Positions,
-};
+use position_share::{rdp, Coordinate, Positions, Search};
 use uuid::Uuid;
 
 /// Generates a simulated path for an object.
@@ -25,6 +22,7 @@ fn generate_path(num_points: usize) -> Positions {
 
     for i in 0..num_points {
         // Calculate the parametric variable t, which ranges from 0 to 1
+        #[allow(clippy::cast_precision_loss)]
         let t = i as f64 / num_points as f64;
 
         // Simulate a 3D curve representing more complex movement
@@ -39,6 +37,7 @@ fn generate_path(num_points: usize) -> Positions {
         // Create a new coordinate point
         let coordinate = Coordinate::new(x, y, z);
         // Calculate the timestamp for this point (one point every 10 seconds)
+        #[allow(clippy::cast_possible_wrap)]
         let timestamp = start_time + Duration::seconds(i as i64 * 10);
 
         // Add the coordinate and timestamp to the Positions object

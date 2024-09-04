@@ -67,6 +67,7 @@ impl<'a, 'b> MaxHeap<'a, 'b> {
     }
 }
 
+/// A trait for calculating the most novel coordinate in a segment of the time-series.
 pub trait GeometricNovelty {
     /// Calculates the most novel coordinate in a segment of the time-series.
     ///

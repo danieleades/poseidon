@@ -6,7 +6,7 @@
 
 #![feature(impl_trait_in_assoc_type)]
 use uuid::Uuid;
-pub mod positions;
+mod positions;
 mod probability;
 
 mod transmission_history;
@@ -16,4 +16,7 @@ pub use coordinate::Coordinate;
 
 pub type NodeId = Uuid;
 
+pub use positions::geometric_novelty::{rdp, GeometricNovelty};
+pub use positions::search_strategy::Search;
+pub use positions::search_strategy::SearchStrategy;
 pub use positions::Positions;
