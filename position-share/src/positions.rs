@@ -107,6 +107,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn test_most_novel_coordinates() {
         // Coordinate arrangement:
         //

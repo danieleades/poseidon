@@ -24,6 +24,8 @@ use super::{
 use crate::{probability::Probability, transmission_history::TransmissionHistory, NodeId};
 use uuid::Uuid;
 
+mod segment;
+
 /// A search strategy for finding the most novel positions in a time-series.
 pub trait SearchStrategy {
     fn search<'a>(

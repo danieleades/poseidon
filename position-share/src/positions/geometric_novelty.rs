@@ -105,8 +105,8 @@ pub fn rdp<'a>(segment: Segment<'_, 'a>) -> (&'a Datum, f64, usize) {
 
     segment.middle()
         .iter()
-        .zip(1..)
-        .map(|(datum, i)| {
+        .enumerate()
+        .map(|(i, datum)| {
             let distance =
                 distance_from_line(&segment.start().coordinate, &segment.end().coordinate, &datum.coordinate);
             (*datum, distance, i)
