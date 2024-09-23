@@ -19,7 +19,7 @@ pub use coordinate::Coordinate;
 pub type NodeId = Uuid;
 
 pub use positions::{
-    geometric_novelty::{rdp, GeometricNovelty},
+    geometric_novelty::{rdp, rdp_area, GeometricNovelty},
     search_strategy::{Search, SearchStrategy},
     Positions,
 };

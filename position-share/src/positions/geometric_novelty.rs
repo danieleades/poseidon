@@ -91,10 +91,35 @@ where
     }
 }
 
-/// A 3D version of the [Ramer-Douglas-Peucker algorithm](https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm) for calculating geometric novelty.
+/// A trait for calculating the novelty of a point in relation to its neighbors.
+pub trait NoveltyMeasure {
+    fn calculate_novelty(prev: &Coordinate, current: &Coordinate, next: &Coordinate) -> f64;
+}
+
+/// Perpendicular distance novelty measure (standard RDP)
+pub struct PerpendicularDistance;
+
+impl NoveltyMeasure for PerpendicularDistance {
+    fn calculate_novelty(prev: &Coordinate, current: &Coordinate, next: &Coordinate) -> f64 {
+        distance_from_line(prev, next, current)
+    }
+}
+
+/// Area-based novelty measure
+pub struct TriangleArea;
+
+impl NoveltyMeasure for TriangleArea {
+    fn calculate_novelty(prev: &Coordinate, current: &Coordinate, next: &Coordinate) -> f64 {
+        triangle_area(prev, current, next)
+    }
+}
+
 #[must_use]
 #[allow(clippy::missing_panics_doc)]
-pub fn rdp<'a>(segment: &[&'a Datum]) -> Option<(&'a Datum, f64, usize)> {
+/// A 3D version of the [Ramer-Douglas-Peucker algorithm](https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm) for calculating geometric novelty.
+pub fn rdp_generic<'a, T: NoveltyMeasure>(
+    segment: &[&'a Datum],
+) -> Option<(&'a Datum, f64, usize)> {
     // Algorithm:
     // 1. if there are less than 3 data points, return None
     // 2. find the most novel datum in the segment, excluding the first and last
@@ -116,10 +141,22 @@ pub fn rdp<'a>(segment: &[&'a Datum]) -> Option<(&'a Datum, f64, usize)> {
         .zip(1..)
         .map(|(datum, i)| {
             let distance =
-                distance_from_line(&start.coordinate, &end.coordinate, &datum.coordinate);
+                T::calculate_novelty(&start.coordinate, &end.coordinate, &datum.coordinate);
             (*datum, distance, i)
         })
         .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+}
+
+/// Standard RDP algorithm using perpendicular distance
+#[must_use]
+pub fn rdp<'a>(segment: &[&'a Datum]) -> Option<(&'a Datum, f64, usize)> {
+    rdp_generic::<PerpendicularDistance>(segment)
+}
+
+/// Area-based RDP algorithm
+#[must_use]
+pub fn rdp_area<'a>(segment: &[&'a Datum]) -> Option<(&'a Datum, f64, usize)> {
+    rdp_generic::<TriangleArea>(segment)
 }
 
 /// Calculates the perpendicular distance from a coordinate to a line defined by
@@ -143,6 +180,14 @@ fn distance_from_line(start: &Coordinate, end: &Coordinate, coordinate: &Coordin
     // The perpendicular distance is the magnitude of the cross product divided by
     // the magnitude of the line vector
     cross_product_magnitude / line_magnitude
+}
+
+/// Calculates the area of a triangle formed by three 3D coordinates.
+fn triangle_area(a: &Coordinate, b: &Coordinate, c: &Coordinate) -> f64 {
+    let ab = b - a;
+    let ac = c - a;
+    let cross_product = ab.cross_product(&ac);
+    0.5 * cross_product.magnitude()
 }
 
 #[cfg(test)]

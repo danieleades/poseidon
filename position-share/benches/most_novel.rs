@@ -1,6 +1,6 @@
 use chrono::{Duration, Utc};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use position_share::{rdp, Coordinate, Positions, Search};
+use position_share::{rdp, rdp_area, Coordinate, GeometricNovelty, Positions, Search};
 use uuid::Uuid;
 
 /// Generates a simulated path for an object.
@@ -50,13 +50,16 @@ fn generate_path(num_points: usize) -> Positions {
     positions
 }
 
-fn bench_most_novel_coordinates(c: &mut Criterion) {
+fn bench_most_novel_coordinates<S>(c: &mut Criterion, strategy: S)
+where
+    S: GeometricNovelty + Copy,
+{
     let positions = generate_path(5000);
     let recipient = Uuid::new_v4();
     c.bench_function("most_novel_coordinates", |b| {
         b.iter(|| {
             positions.most_novel_coordinates(
-                &Search::new(rdp, Some(0.4)),
+                &Search::new(strategy, Some(0.4)),
                 black_box(&recipient),
                 black_box(100),
             )
@@ -64,5 +67,17 @@ fn bench_most_novel_coordinates(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bench_most_novel_coordinates);
+fn bench_most_novel_coordinates_distance(c: &mut Criterion) {
+    bench_most_novel_coordinates(c, rdp);
+}
+
+fn bench_most_novel_coordinates_rdp_area(c: &mut Criterion) {
+    bench_most_novel_coordinates(c, rdp_area);
+}
+
+criterion_group!(
+    benches,
+    bench_most_novel_coordinates_distance,
+    bench_most_novel_coordinates_rdp_area
+);
 criterion_main!(benches);
