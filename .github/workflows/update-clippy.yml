@@ -1,0 +1,31 @@
+name: Update Clippy Version
+
+on:
+  schedule:
+    # Runs at 00:00 UTC on the first day of each month
+    - cron: '0 0 1 * *'
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  update-clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "CURRENT_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+      - name: Update Clippy version in CI workflow
+        run: |
+          sed -i "s/nightly-[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}/nightly-${{ env.CURRENT_DATE }}/" .github/workflows/ci.yml
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore: update clippy to nightly-${{ env.CURRENT_DATE }}"
+          title: "chore: update clippy to nightly-${{ env.CURRENT_DATE }}"
+          body: |
+            This PR updates the Clippy version to the latest nightly.
+            
+            This is an automated PR created by the monthly Clippy update workflow.
+          branch: update-clippy-version
+          delete-branch: true
+          labels: |
+            dependencies
+            ci
