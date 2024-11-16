@@ -23,7 +23,7 @@ struct Comparator<'a, 'b> {
     pub index: usize,
 }
 
-impl<'a, 'b> Ord for Comparator<'a, 'b> {
+impl Ord for Comparator<'_, '_> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.distance
             .partial_cmp(&other.distance)
@@ -31,13 +31,13 @@ impl<'a, 'b> Ord for Comparator<'a, 'b> {
     }
 }
 
-impl<'a, 'b> PartialOrd for Comparator<'a, 'b> {
+impl PartialOrd for Comparator<'_, '_> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<'a, 'b> Eq for Comparator<'a, 'b> {}
+impl Eq for Comparator<'_, '_> {}
 
 /// A max-heap used to store segments of the time-series sorted by the most
 /// geometrically novel coordinate in the segment.
