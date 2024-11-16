@@ -22,7 +22,7 @@ impl std::ops::Sub for Coordinate {
     }
 }
 
-impl<'a> std::ops::Sub for &'a Coordinate {
+impl std::ops::Sub for &Coordinate {
     type Output = Vector;
 
     fn sub(self, other: Self) -> Self::Output {
