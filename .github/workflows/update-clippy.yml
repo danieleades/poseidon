@@ -3,7 +3,6 @@ name: Update Clippy Version
 permissions:
   contents: write
   pull-requests: write
-  workflows: write
 
 on:
   schedule:
@@ -23,6 +22,7 @@ jobs:
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
+          token: ${{ secrets.WORKFLOW_UPDATE_TOKEN }}
           commit-message: "chore: update clippy to nightly-${{ env.CURRENT_DATE }}"
           title: "chore: update clippy to nightly-${{ env.CURRENT_DATE }}"
           body: |
