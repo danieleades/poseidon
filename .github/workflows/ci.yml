@@ -42,7 +42,7 @@ jobs:
         with:
           toolchain: nightly-2024-11-14
           components: clippy
-      - uses: actions-rs-plus/clippy-check@v2
+      - uses: actions-rs-plus/clippy-check@v2.7.0
         with:
           args: --all-features --all-targets
 
